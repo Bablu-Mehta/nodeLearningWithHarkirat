@@ -26,15 +26,13 @@ const app = express();
 Response: 200 OK with an array of file names in JSON format.
 Example: GET http://localhost:3000/files
  */
-const dir = './files';
-
 app.get('/files', (req, res)=>{
-  fs.readdir(dir, (err, files)=>{
-    if(err){
-      res.status(500).json({error: "failed to retrieve the file data."})
+  fs.readdir(path.join(__dirname, './files/'), (err, files) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to retrieve files' });
     }
     res.json(files);
-  })
+  });
 })
 
 /**
@@ -49,15 +47,17 @@ app.get('/files', (req, res)=>{
 
     fs.readFile(filePath,"utf-8", (err, data)=>{
       if(err){
-        res.status(500).json({error: "Not able to read the file contents"})
+        return res.status(404).send('File not found');
       }
       res.status(200).send(data);
     })
 
   })
 
+  // - For any other route not defined in the server return 404
+
   app.all('/*', (req, res) =>{
-    res.status(404).json({error: "Not able to find the path"});
+    res.status(404).send("Route not found");
   })
 
 app.listen(3000, () => {
