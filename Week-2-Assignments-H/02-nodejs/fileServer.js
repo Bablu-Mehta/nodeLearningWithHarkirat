@@ -21,5 +21,25 @@ const fs = require('fs');
 const path = require('path');
 const app = express();
 
+/**
+ * 1. GET /files - Returns a list of files present in `./files/` directory
+Response: 200 OK with an array of file names in JSON format.
+Example: GET http://localhost:3000/files
+ */
+
+const dir = './files';
+
+app.get('/files', (req, res)=>{
+  fs.readdir(dir, (err, files)=>{
+    if(err){
+      res.status(500).json({error: "failed to retrieve the file data."})
+    }
+    res.json(files);
+  })
+})
+
+app.listen(3000, () => {
+  console.log(`Example app listening on port`)
+})
 
 module.exports = app;
