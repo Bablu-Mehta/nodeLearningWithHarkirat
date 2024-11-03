@@ -26,7 +26,6 @@ const app = express();
 Response: 200 OK with an array of file names in JSON format.
 Example: GET http://localhost:3000/files
  */
-
 const dir = './files';
 
 app.get('/files', (req, res)=>{
@@ -37,6 +36,29 @@ app.get('/files', (req, res)=>{
     res.json(files);
   })
 })
+
+/**
+ * GET /file/:filename - Returns content of given file by name
+     Description: Use the filename from the request path parameter to read the file from `./files/` directory
+     Response: 200 OK with the file content as the response body if found, or 404 Not Found if not found. Should return `File not found` as text if file is not found
+     Example: GET http://localhost:3000/file/example.txt
+ */
+
+  app.get('/file/:filename', (req, res)=>{
+    const filePath = path.join(__dirname, './files/', req.params.filename);
+
+    fs.readFile(filePath,"utf-8", (err, data)=>{
+      if(err){
+        res.status(500).json({error: "Not able to read the file contents"})
+      }
+      res.status(200).send(data);
+    })
+
+  })
+
+  app.all('/*', (req, res) =>{
+    res.status(404).json({error: "Not able to find the path"});
+  })
 
 app.listen(3000, () => {
   console.log(`Example app listening on port`)
