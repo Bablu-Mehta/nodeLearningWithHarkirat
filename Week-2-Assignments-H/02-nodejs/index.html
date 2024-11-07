@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo List</title>
+
+    <style>
+      /* Internal CSS for styling todos */
+      .todo {
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+        position: relative; /* Ensures delete button is positioned correctly */
+      }
+
+      .todo h3 {
+        margin: 0;
+        font-size: 1.2em;
+        color: #333;
+      }
+
+      .todo p {
+        margin: 5px 0 0;
+        color: #555;
+      }
+
+      .delete-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        background-color: #ff4d4d;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .delete-btn:hover {
+        background-color: #ff3333;
+      }
+    </style>
+
+    <script>
+      const getTodos = async () => {
+        const response = await fetch("http://localhost:3000/todos", {
+          method: "GET",
+        });
+
+        const todos = await response.json();
+        let parentElement = document.getElementById("mainArea");
+        parentElement.innerHTML = ""; // Clear previous content
+
+        todos.forEach((todo) => {
+          // Create a container for each todo
+          const todoContainer = document.createElement("div");
+          todoContainer.classList.add("todo");
+
+          // Create title element
+          const titleElement = document.createElement("h3");
+          titleElement.textContent = todo.title;
+
+          // Create description element
+          const descriptionElement = document.createElement("p");
+          descriptionElement.textContent = todo.description;
+
+          // Create delete button
+          const deleteButton = document.createElement("button");
+          deleteButton.classList.add("delete-btn");
+          deleteButton.textContent = "Delete";
+
+          // Delete button event listener to remove this specific todo
+          deleteButton.addEventListener("click", async() => {
+            await fetch(`http://localhost:3000/todos/${todo?.id}`, {
+                method:"DELETE",
+            });
+            getTodos();
+          });
+
+          // Append title, description, and delete button to the container
+          todoContainer.appendChild(titleElement);
+          todoContainer.appendChild(descriptionElement);
+          todoContainer.appendChild(deleteButton);
+
+          // Append the container to the mainArea
+          parentElement.appendChild(todoContainer);
+        });
+      };
+
+      const handleTodoSubmit = async () => {
+        const title = document.getElementById("title").value;
+        const description = document.getElementById("description").value;
+        await fetch("http://localhost:3000/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: title,
+            description: description,
+          }),
+        });
+        await getTodos();
+        document.getElementById("title").value = "";
+        document.getElementById("description").value = "";
+      };
+
+      document.addEventListener("DOMContentLoaded", getTodos);
+    </script>
+  </head>
+
+  <body>
+    <h2>Todo List</h2>
+    <label for="title">Todo Title:</label>
+    <input type="text" id="title" /><br /><br />
+    <label for="description">Todo Description:</label>
+    <input type="text" id="description" />
+    <button onclick="handleTodoSubmit()">Submit</button>
+
+    <div id="mainArea"></div>
+  </body>
+</html>

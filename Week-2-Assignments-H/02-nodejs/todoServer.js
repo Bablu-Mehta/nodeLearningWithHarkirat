@@ -42,10 +42,12 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const PORT = 3000;
+const cors = require('cors');
 
 const app = express();
 
 app.use(bodyParser.json());
+app.use(cors());
 
 let todos = [];
 
@@ -89,12 +91,11 @@ app.get("/todos/:todoId", (req, res) => {
      */
 
 app.post("/todos", (req, res) => {
-  const { title, completed, description } = req.body;
+  const { title,  description } = req.body;
 
   let todo = {
     id: Math.floor(Math.random() * 100),
     title:title,
-    completed: completed,
     description: description,
   };
   todos.push(todo);
@@ -112,7 +113,7 @@ app.post("/todos", (req, res) => {
 
     app.put('/todos/:id', (req, res)=>{
       const {id} = req.params;
-      const {title, completed, description} = req.body;
+      const {title, description} = req.body;
 
       const todoIndex = todos.findIndex(todo => todo.id == parseInt(id))
 
@@ -122,7 +123,7 @@ app.post("/todos", (req, res) => {
 
       todos = todos.map(todo =>{
         if(todo.id == id){
-          return {...todo, title, completed, description}
+          return {...todo, title, description}
         }
         return todo;
       })
@@ -162,8 +163,7 @@ app.all("/*", (req, res) => {
   res.status(404).send("Route not found");
 });
 
-// app.listen(PORT, () => {
-//   console.log(`Example app listening on port ${PORT}`);
-// });
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}`);
+});
 
-module.exports = app;
