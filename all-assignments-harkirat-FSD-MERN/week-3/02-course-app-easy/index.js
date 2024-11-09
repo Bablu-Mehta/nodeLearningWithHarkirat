@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
+const JWT = require("jsonwebtoken");
 
 app.use(express.json());
 app.use(bodyParser.json());
@@ -9,18 +10,37 @@ let ADMINS = [];
 let USERS = [];
 let COURSES = [];
 
+const ADMIN_SECRET = "Admin secret";
+
+const generateJWTAdmin = (user) => {
+  payload = { username: user.username };
+  const token = JWT.sign(payload, ADMIN_SECRET, { expiresIn: "1h" });
+  return token;
+};
+
 const adminAuthentication = (req, res, next) => {
-  const { username, password } = req.headers;
+  const { authorization } = req.headers;
 
-  const adminExist = ADMINS.find(
-    (admin) => admin.username == username && admin.password == password
-  );
+  if (authorization) {
+    const token = authorization.split(" ")[1];
 
-  if (adminExist) {
-    next();
-  } else {
-    return res.status(404).json({ message: "Authentication Failed" });
+    JWT.verify(token, ADMIN_SECRET, (err, user) => {
+      if (err) {
+        return res.sendStatus(403);
+      }
+      next();
+    });
   }
+
+  // const adminExist = ADMINS.find(
+  //   (admin) => admin.username == username && admin.password == password
+  // );
+
+  // if (adminExist) {
+  //   next();
+  // } else {
+  //   return res.status(404).json({ message: "Authentication Failed" });
+  // }
 };
 
 // Admin routes
@@ -34,13 +54,22 @@ app.post("/admin/signup", (req, res) => {
     return res.json({ message: "user already exist" });
   } else {
     ADMINS.push({ username, password });
-    res.status(201).json({ message: "Admin created successfully" });
+    const token = generateJWTAdmin({ username, password });
+    res.status(201).json({ message: "Admin created successfully", token });
   }
 });
 
-app.post("/admin/login", adminAuthentication, (req, res) => {
+app.post("/admin/login", (req, res) => {
   // logic to log in admin
-  res.status(200).send("Logged in successfully");
+  const { username, password } = req.body;
+
+  const adminExsit = ADMINS.find((admin) => admin.username == username);
+  if (adminExsit) {
+    const token = generateJWTAdmin(adminExsit);
+    res.status(200).json({ message: "Logged in successfully", token });
+  } else {
+    res.status(404).send("Login failed");
+  }
 });
 
 app.post("/admin/courses", adminAuthentication, (req, res) => {
@@ -83,19 +112,43 @@ app.get("/admin/courses", adminAuthentication, (req, res) => {
   res.json({ courses: COURSES });
 });
 
+const USER_SECRET = "User secret";
+
+const generateJWTUser = (user) => {
+  payload = { username: user.username };
+  const token = JWT.sign(payload, USER_SECRET, { expiresIn: "1h" });
+  return token;
+};
+
 const userAuthentication = (req, res, next) => {
-  const { username, password } = req.headers;
+  const { authorization } = req.headers;
 
-  const user = USERS.find(
-    (user) => user.username == username && user.password == password
-  );
+  if (authorization) {
+    const token = authorization.split(" ")[1];
+    JWT.verify(token, USER_SECRET, (err, user) => {
+      if (err) {
+        return res.status(403).send(err);
+      }
 
-  if (user) {
-    req.user = user;
-    next();
-  } else {
-    return res.status(404).json({ message: "AUthentication Failed" });
+      const userExist = USERS.find((item) => item.username == user.username);
+
+      if (userExist) {
+        req.user = userExist;
+        next();
+      }
+    });
   }
+
+  // const user = USERS.find(
+  //   (user) => user.username == username && user.password == password
+  // );
+
+  // if (user) {
+  //   req.user = user;
+  //   next();
+  // } else {
+  //   return res.status(404).json({ message: "AUthentication Failed" });
+  // }
 };
 
 // User routes
@@ -104,12 +157,22 @@ app.post("/users/signup", (req, res) => {
   const { username, password } = req.body;
 
   USERS.push({ username, password, purchasedCourses: [] });
-  res.status(201).send("User created Successfully");
+  const token = generateJWTUser({ username, password });
+  res.status(201).send({ message: "User created Successfully", token });
 });
 
 app.post("/users/login", userAuthentication, (req, res) => {
   // logic to log in user
-  res.json("Logged in Successfully");
+  const { username, password } = req.body;
+  const userExist = USERS.find(
+    (user) => user.username == username && user.password == password
+  );
+  if (userExist) {
+    const token = generateJWTUser({ username, password });
+    return res.json({ message: "Logged in Successfully", token });
+  } else {
+    return res.status(404).send("Not able to login");
+  }
 });
 
 app.get("/users/courses", userAuthentication, (req, res) => {
@@ -121,13 +184,10 @@ app.get("/users/courses", userAuthentication, (req, res) => {
 app.post("/users/courses/:courseId", userAuthentication, (req, res) => {
   // logic to purchase a course
   const { courseId } = req.params;
-  console.log(courseId, req.params);
   const user = req.user;
   const course = COURSES.find((course) => course.id == Number(courseId));
-  console.log(course);
   if (course) {
     user.purchasedCourses.push(courseId);
-    console.log(USERS);
     res.json({ message: "Course Purchased successfully" });
   } else {
     res.status(404).json({ message: "Course not found or not Available" });
@@ -142,10 +202,9 @@ app.get("/users/purchasedCourses", userAuthentication, (req, res) => {
     return COURSES.filter((course) => courseId === course.id);
   });
 
-  console.log(purchasedCourses, purchasedCoursesId);
 
   if (purchasedCourses) {
-    res.json({ PurchasedCourse: purchasedCourses});
+    res.json({ PurchasedCourse: purchasedCourses });
   } else {
     res.send(200).json({ message: "You haven't purchased any course yet." });
   }
